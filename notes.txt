@@ -1,0 +1,72 @@
+loader.s - load SP
+    IN GENERAL: first understanding
+    for loading the SP to RAM and then pass it to start kernel.cpp
+
+
+
+kernel.cpp - kernel of myos
+
+
+
+.set MAGIC, 0x1badb002
+.set FLAGS, (1<<0 | 1<<1)
+.set CHECKSUM, -(MAGIC +FLAGS)
+
+.section .multiboot
+    .long MAGIC
+    .long FLAGS
+    .long CHECKSUM
+
+
+
+.section .text
+.extern kernelMain
+;.extern callConstructors
+.global loader
+
+loader:
+    mov $kernel_stack, %esp
+
+;    call callConstructors
+
+    push %eax
+    push %ebx
+    call kernelMain
+
+_stop:
+    cli
+    hlt
+    jmp _stop
+
+.section .bss
+.space 2*1024*1024; #2MB  to prevent rewriting stack where grub is located
+kernel_stack:
+
+
+void printf(char* str)
+{
+    unsigned short* VideoMemory = (unsigned short*)0xb8000;
+
+    for (int i = 0; str[i] != '\0'; ++i)
+    {
+        VideoMemory[i] = (VideoMemory[i] & 0xFF00) | str[i];
+    }
+}
+
+
+/*typedef void (*constructor)();
+extern "C" constructor start_ctors;
+extern "C" constructor end_ctors;
+extern "C" void allConstructors()
+{
+    for(constructor* i = &start_ctors; *i != end_ctors; ++i)
+        (*i)();
+}
+*/
+extern "C" void kernelMain(void* multiboot_structure, unsigned int magicNumber)
+{
+    printf("Hello World! My OS.");
+
+    while(1);
+}
+
